@@ -1,0 +1,45 @@
+<ion-header>
+	<ion-navbar>
+
+		<ion-buttons start>
+			<button *ngIf="rtlBack" (click)="backRtlTransition()" ion-button class="custom-back-button">
+			    <ion-icon name="arrow-back"></ion-icon>
+			    {{'Back' | translate }}
+			</button>
+
+			<button ion-button menuToggle *ngIf="!selectedItem">
+			  <ion-icon name="menu"></ion-icon>
+			</button>
+
+		</ion-buttons>
+
+		<ion-title><span *ngIf="selectedItem" [innerHTML]="selectedItem.title.rendered"></span></ion-title>
+
+		<ion-buttons end>
+			<button *ngIf="showShare" ion-button (click)="share()">
+				<ion-icon name="share"></ion-icon>
+			</button>
+			<button ion-button class="search-button-header" (click)="openSearch()">
+				<ion-icon name="search"></ion-icon>
+			</button>
+		</ion-buttons>
+		
+	</ion-navbar>
+</ion-header>
+
+<ion-content>
+ <div *ngIf="selectedItem" class="selection my-entry-content">
+
+ 	<div *ngIf="selectedItem.appp && selectedItem.appp.post_detail && selectedItem.appp.post_detail.above_title" [innerHTML]="selectedItem.appp.post_detail.above_title"></div>
+
+    <h2 [innerHTML]="selectedItem.title.rendered" id="my-entry-title"></h2>
+
+    <div *ngIf="selectedItem.appp && selectedItem.appp.post_detail && selectedItem.appp.post_detail.below_title" [innerHTML]="selectedItem.appp.post_detail.below_title"></div>
+
+    <div *ngIf="content" [innerHTML]="content" #mycontent></div>
+
+    <button *ngIf="requireLogin" ion-button (click)="openLogin()">{{ 'Login' | translate }}</button>
+
+    <div *ngIf="selectedItem.appp && selectedItem.appp.post_detail && selectedItem.appp.post_detail.below_content" [innerHTML]="selectedItem.appp.post_detail.below_content | sanitizeHtml"></div>
+ </div>
+</ion-content>

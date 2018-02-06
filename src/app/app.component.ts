@@ -54,6 +54,8 @@ export class MyApp {
   menu_side: string = "left";
   rtl: boolean = false;
   ajax_url: string;
+  searchPageId : string;
+  searchPageMenuIdx : number;
 
   constructor(
     private platform: Platform,
@@ -104,8 +106,16 @@ export class MyApp {
       this.openLoginModal();
     });
 
+    events.subscribe('api:force_logout', () => {
+      this.forceLogout();
+    });
+
     events.subscribe('pushpage', page => {
       this.pushPage( page );
+    });
+
+    events.subscribe('opensearch', () => {
+      this.openSearch();
     });
 
   }
@@ -181,6 +191,7 @@ export class MyApp {
   afterData(data) {
 
     this.SplashScreen.hide();
+    this.configureSearchPage(data);
     this.loadMenu(data);
 
     this.showLogin = ( data.side_menu_login == "on" ) ? true : false;
@@ -215,6 +226,26 @@ export class MyApp {
       this.storage.set( 'registration_url', data.registration_url );
     }
 
+  }
+
+  // to use this, AppData menu items should have one with matching slug.
+  // this then overrides the page type for special handling
+  configureSearchPage(data) {
+    let idx = 0;
+    for( let item of data.menus.items ) {
+      if( item.slug === 'search' ) {
+        //item.title = '\u641c\u7d22';
+        item.page_type = 'search';
+        this.searchPageId = item.page_id;
+        this.searchPageMenuIdx = idx;
+      }
+      idx++;
+    }
+  }
+
+  openSearch() {
+    let searchPage = this.pages[this.searchPageMenuIdx];
+    this.pushPage(searchPage);
   }
 
   loadMenu(data) {
@@ -612,6 +643,8 @@ export class MyApp {
   getPageModuleName(page_id) {
     if(!isDevMode())
       return 'Page'+page_id;
+    else if(page_id === this.searchPageId)
+      return 'SearchPage';
     else
       return 'CustomPage';
   }
@@ -1017,6 +1050,13 @@ export class MyApp {
       redirect = data.login_redirect;
     else if(data.logout_redirect)
       redirect = data.logout_redirect;
+    else {
+      // KG: for API login, just reset to main page
+      let mainPage = this.pages[this.mainPageMenuIdx];
+      this.nav.setRoot( 'MainPage', mainPage );
+      // don't do the rest
+      return;
+    }
     
     if(redirect) {
       console.log('redirecting to ', redirect);
@@ -1093,6 +1133,23 @@ export class MyApp {
       }
     });
 
+  }
+
+  forceLogout() {
+
+    this.login_data = null;
+
+    if( this.tabs && this.pages ) {
+      this.resetTabs(false)
+      this.resetSideMenu(false)
+    } else if( this.tabs ) {
+      this.resetTabs(false)
+    } else {
+      this.resetSideMenu(false)
+      // this.openPage(this.pages[0])
+    }
+
+    this.storage.remove('user_login');
   }
 
   // show or hide menu items on login or logout. resetSideMenu(false) for logout

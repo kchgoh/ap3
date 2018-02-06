@@ -1,4 +1,4 @@
-import {NavController, NavParams, Events,LoadingController, ToastController, ItemSliding, Platform, ViewController, Content, IonicPage} from 'ionic-angular';
+import {NavController, NavParams, ToastController, ItemSliding, Platform, ViewController, Content, IonicPage} from 'ionic-angular';
 import {Component, ViewChild, OnInit, Input} from '@angular/core';
 import {AuthPosts} from '../../providers/posts/auth-posts';
 import {GlobalVars} from '../../providers/globalvars/globalvars';
@@ -9,9 +9,9 @@ import {Network} from '@ionic-native/network';
 
 @IonicPage()
 @Component({
-  templateUrl: 'post-list.html'
+  templateUrl: 'search-page.html'
 })
-export class PostList implements OnInit {
+export class SearchPage implements OnInit {
 
   @ViewChild(Content) content: Content;
 
@@ -25,8 +25,6 @@ export class PostList implements OnInit {
   title: string;
   defaultlist: boolean = false
   cardlist: boolean = false;
-  favorites: any = [];
-  doFavorites: boolean = false;
   showSlider: boolean = false;
   showSearch: boolean = false;
   rtlBack: boolean = false;
@@ -34,14 +32,13 @@ export class PostList implements OnInit {
   header_logo_url: string;
   show_header_logo: boolean = false;
   customClasses: string = '';
+  isShowSpinner: boolean = false;
 
   constructor(
     public nav: NavController, 
     public navParams: NavParams, 
-    public eventBus: Events,
     public postService: AuthPosts, 
     public globalvars: GlobalVars, 
-    public loadingController: LoadingController, 
     public storage: Storage, 
     public toastCtrl: ToastController,
     public viewCtrl: ViewController,
@@ -59,38 +56,16 @@ export class PostList implements OnInit {
       this.doLogo()
     }
 
-    if( navParams.data.favorites && navParams.data.favorites === "true" ) {
-      this.doFavorites = true;
-    }
-
-    if( navParams.data.show_slider && navParams.data.show_slider === "true" && navParams.data.slide_route ) {
-      this.loadSlides( navParams.data.slide_route );
-    }
-
-    if( navParams.data.list_display === 'card' ) {
-      this.cardlist = true;
-      this.doFavorites = false;
-    } else {
-      this.defaultlist = true;
-    }
+    this.defaultlist = true;
 
     this.previewAlert(this.route);
 
+    // TODO
     this.customClasses = 'post-list' + ((navParams.data.slug) ? ' page-' + navParams.data.slug : '');
     
   }
 
   ngOnInit() {
-
-    this.networkState = this.Network.type;
-
-    if( this.networkState === 'none' || this.networkState === 'unknown' ) {
-      // if offline, get posts from storage
-      this.getStoredPosts();
-    } else {
-      this.loadPosts( this.route );
-    }
-
   }
 
   ionViewWillEnter() {
@@ -100,34 +75,23 @@ export class PostList implements OnInit {
         this.rtlBack = true
     }
 
-    this.storage.get( this.route.substr(-10, 10) + '_favorites' ).then( (favorites) => {
-      if( favorites )
-        this.favorites = favorites
-    })
- 
   }
 
-  // get posts from storage when we are offline
-  getStoredPosts() {
+  showSpinner() {
+    this.isShowSpinner = true;
+  }
 
-    this.storage.get( this.route.substr(-10, 10) + '_posts' ).then( posts => {
-      if( posts ) {
-        this.items = posts;
-      } else {
-        this.presentToast('No data available, pull to refresh when you are online.');
-      }
-    });
-
+  hideSpinner() {
+    this.isShowSpinner = false;
   }
 
   loadPosts( route ) {
 
-    let loading = this.loadingController.create({
-        showBackdrop: false,
-        //dismissOnPageChange: true
-    });
+    // KG: do not use LoadingController because it steals the focus from the searchbar.
+    // user could be still typing, and then suddenly the keyboard is gone when focus is taken away.
+    // instead just do a simple show/hide spinner, let focus remain in the searchbar.
 
-    loading.present(loading);
+    this.showSpinner();
 
     this.page = 1;
     
@@ -137,37 +101,21 @@ export class PostList implements OnInit {
       // Loads posts from WordPress API
       this.items = items;
 
-      this.storage.set( route.substr(-10, 10) + '_posts', items);
+      // KG: for search, don't store
+      //this.storage.set( route.substr(-10, 10) + '_posts', items);
 
       // load more right away
       this.loadMore(null);
-      loading.dismiss();
+      this.hideSpinner();
     }).catch((err) => {
-      loading.dismiss();
+      this.hideSpinner();
       console.error('Error getting posts', err);
       this.presentToast('Error getting posts.');
     });
 
     setTimeout(() => {
-        loading.dismiss();
+      this.hideSpinner();
     }, 8000);
-
-  }
-
-  // open item post separately
-  openItem(event, item) {
-
-    let opt = {};
-
-    if( this.platform.isRTL && this.platform.is('ios') )
-      opt = { direction: 'back' }
-
-    let pathIndex = this.route.lastIndexOf('/');
-    let root = this.route.substring(0, pathIndex);
-    this.nav.push( 'ApiPost', {
-      root_route: root,
-      slug: item.slug
-    }, opt);
 
   }
 
@@ -175,35 +123,19 @@ export class PostList implements OnInit {
 
     let opt = {};
 
-    if( this.platform.isRTL && this.platform.is('ios') )
-      opt = { direction: 'back' }
+    // TODO somehow this causes error. to investigate
+//    if( this.platform.isRTL && this.platform.is('ios') )
+//      opt = { direction: 'back' }
 
-    this.nav.push('PostDetailsPage', {
-      item: item
+    // use new api page
+	let pathIndex = this.route.lastIndexOf('/');
+	let root = this.route.substring(0, pathIndex);
+    this.nav.push( 'ApiPost', {
+      root_route: root,
+      slug: item.slug
     }, opt);
   }
 
-  doRefresh(refresh) {
-    this.loadPosts( this.route );
-    this.loadSlides( this.navParams.data.slide_route );
-    // refresh.complete should happen when posts are loaded, not timeout
-    setTimeout( ()=> refresh.complete(), 500);
-  }
-
-  // use separate search page
-  openSearch() {
-    this.eventBus.publish('opensearch', {} )
-  }
-
-  toggleSearchBar() {
-    if( this.showSearch === true ) {
-      this.showSearch = false
-    } else {
-      this.showSearch = true
-    }
-
-    this.content.resize()
-  }
 
   search(ev) {
     // set val to the value of the searchbar
@@ -224,9 +156,7 @@ export class PostList implements OnInit {
   }
 
   clearSearch() {
-    // reset to original query
-    this.route = this.navParams.data.list_route;
-    this.loadPosts(this.route)
+    this.items = [];
   }
 
   loadMore(infiniteScroll) {
@@ -263,53 +193,6 @@ export class PostList implements OnInit {
 
   }
 
-  addFav(slidingItem: ItemSliding, item) {
-
-    var inArray = false;
-
-    for (let i = this.favorites.length - 1; i >= 0; i--) {
-
-      if( this.favorites[i].id === item.id ) {
-        inArray = true;
-        break;
-      }
-    }
-
-    // Don't add duplicate favs
-    if( inArray === false ) {
-
-      this.favorites.push(item);
-
-      this.storage.set( this.route.substr(-10, 10) + '_favorites', this.favorites);
-
-      this.presentToast('Favorite Added');
-
-    } else {
-
-      for (let i = this.favorites.length - 1; i >= 0; i--) {
-        if( this.favorites[i].id === item.id ) {
-          this.favorites.splice(i, 1);
-          break;
-        }
-      }
-
-      this.storage.set( this.route.substr(-10, 10) + '_favorites', this.favorites);
-
-      // refresh the list
-      if( this.favorites.length ) {
-        this.items = this.favorites;
-      } else {
-        this.showAll();
-      }
-
-      this.presentToast('Favorite Removed');
-
-    }
-
-    slidingItem.close();
-
-  }
-
   presentToast(msg) {
 
     let toast = this.toastCtrl.create({
@@ -324,36 +207,6 @@ export class PostList implements OnInit {
 
     toast.present();
 
-  }
-
-  showFavorites() {
-
-    this.storage.get( this.route.substr(-10, 10) + '_favorites' ).then( (favorites) => {
-
-      if( favorites && favorites.length) {
-
-        this.favorites = favorites;
-
-        this.items = favorites;
-
-        this.showSlider = false;
-
-      } else {
-        this.presentToast('No Favorites to show');
-      }
-
-    });
-
-  }
-
-  showAll() {
-    this.storage.get( this.route.substr(-10, 10) + '_posts' ).then((items) => {
-      this.items = items;
-    });
-
-    if( this.navParams.data.show_slider && this.navParams.data.show_slider === "true" ) {
-      this.showSlider = true;
-    }
   }
 
   // Show alert in preview if not using https

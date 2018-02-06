@@ -18,53 +18,26 @@
 
     <ion-title *ngIf="!show_header_logo">{{title | translate}}</ion-title>
 
-    <ion-buttons end>
-    <button ion-button class="search-button-header" (click)="openSearch()">
-        <ion-icon name="search"></ion-icon>
-      </button>
-    </ion-buttons>
-
     </ion-navbar>
 
-    <ion-toolbar *ngIf="showSearch">
-      <ion-searchbar placeholder="{{'Search' | translate }}" debounce="1000" (ionInput)="search($event)" (ionClear)="clearSearch()"></ion-searchbar>
-    </ion-toolbar>
-
-    <ion-toolbar *ngIf="doFavorites" id="favorites-toolbar">
-
-      <button ion-button clear (click)="showAll()">
-        {{ 'All' | translate }}
-      </button>
-
-      <button ion-button clear (click)="showFavorites()">
-        {{ 'Favorites' | translate }}
-      </button>
-
+    <ion-toolbar>
+      <ion-searchbar placeholder="{{'Enter search text...' | translate }}" debounce="1000" (ionInput)="search($event)" (ionClear)="clearSearch()"></ion-searchbar>
     </ion-toolbar>
 
 </ion-header>
 
 <ion-content [ngClass]="customClasses">
-  <ion-refresher (ionRefresh)="doRefresh($event)">
-    <ion-refresher-content></ion-refresher-content>
-  </ion-refresher>
 
-  <ion-slides *ngIf="showSlider" pager>
+  <ion-grid *ngIf="isShowSpinner" style="height:100%">
+    <ion-row justify-content-center align-items-center style="height:100%">
+      <ion-spinner></ion-spinner>
+    </ion-row>
+  </ion-grid>
 
-    <ion-slide *ngFor="let slide of slides" [ngStyle]="{'background-image': 'url(' + (slide.featured_image_urls ? slide.featured_image_urls.large : null) + ')'}" (click)="openItem($event, slide)">
-
-      <h3 class="slide-title" *ngIf="slide.title && slide.title.rendered" [innerHTML]="slide.title.rendered"></h3>
-
-      <div *ngIf="slide.appp && slide.appp.post_list && slide.appp.post_list.slide_content" [innerHTML]="slide.appp.post_list.slide_content"></div>
-
-    </ion-slide>
-
-  </ion-slides>
-  
   <ion-list *ngIf="defaultlist">
 
     <ion-item-sliding *ngFor="let item of items" #slidingItem>
-      <button ion-item (click)="openItem($event, item)">
+      <button ion-item (click)="itemTapped($event, item)">
 
       <ion-avatar item-left *ngIf="item.featured_image_urls">
         <img *ngIf="item.featured_image_urls && item.featured_image_urls.thumbnail" src="{{item.featured_image_urls.thumbnail}}">
@@ -83,19 +56,13 @@
 
       </button>
 
-      <ion-item-options side="right" *ngIf="doFavorites">
-        <button ion-button color="primary" (click)="addFav(slidingItem, item)">
-          <ion-icon name="star-outline"></ion-icon>
-          {{ 'Favorite' | translate }}
-        </button>
-      </ion-item-options>
     </ion-item-sliding>
 
   </ion-list>
 
   <ion-list *ngIf="cardlist">
 
-    <ion-card (click)="openItem($event, item)" *ngFor="let item of items">
+    <ion-card (click)="itemTapped($event, item)" *ngFor="let item of items">
       
       <div class="card-featured-wrap" *ngIf="item.featured_image_urls && item.featured_image_urls.large">
         <img src="{{item.featured_image_urls.large}}">

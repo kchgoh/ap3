@@ -28,6 +28,7 @@ import { InAppPurchase } from '@ionic-native/in-app-purchase';
 /* Providers */
 import {AppCamera} from '../providers/camera/app-camera';
 import {Posts} from '../providers/posts/posts';
+import {AuthPosts} from '../providers/posts/auth-posts';
 import {GlobalVars} from '../providers/globalvars/globalvars';
 import {AppAds} from '../providers/appads/appads';
 import {Logins} from "../providers/logins/logins";
@@ -83,6 +84,7 @@ export class MyMissingTranslationHandler implements MissingTranslationHandler {
     {provide: MissingTranslationHandler, useClass: MyMissingTranslationHandler},
     AppCamera,
     Posts,
+    AuthPosts,
     GlobalVars,
     AppAds,
     FbConnectIframe,
